@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旅の精算帳</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f8fafc;
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    font-size: 14px;
+    color: #1e293b;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: #1e293b;
+    color: #fff;
+    padding: 24px 16px 32px;
+  }
+  .header-inner {
+    max-width: 540px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+  .btn-share {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fbbf24;
+    color: #1e293b;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn-share:hover { background: #fde68a; }
+  .btn-share.copied { background: #4ade80; }
+
+  /* Main content */
+  .wrap {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 0 16px;
+    margin-top: -16px;
+    padding-bottom: 40px;
+  }
+
+  /* Cards */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Summary */
+  .summary-nums {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  .total-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+  .total-amount { font-size: 36px; font-weight: 700; color: #1e293b; line-height: 1; }
+  .share-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; text-align: right; }
+  .share-amount { font-size: 22px; font-weight: 700; color: #f59e0b; text-align: right; }
+
+  .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .member-cell {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .member-name-btn {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .member-name-btn:hover { color: #f59e0b; }
+  .member-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid #f59e0b;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1e293b;
+    width: 72px;
+    outline: none;
+  }
+  .member-paid { font-size: 13px; font-weight: 600; color: #94a3b8; flex-shrink: 0; }
+  .member-paid.ok { color: #22c55e; }
+
+  /* Hint */
+  .hint {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 3px solid #fbbf24;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #92400e;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  /* Form */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  select, input[type="number"], input[type="text"] {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #1e293b;
+    width: 100%;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input:focus { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,0.15); }
+  ::placeholder { color: #cbd5e1; }
+
+  .btn-add {
+    width: 100%;
+    background: #1e293b;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.15s;
+  }
+  .btn-add:hover { background: #334155; }
+  .btn-add:active { background: #0f172a; }
+
+  .btn-settle {
+    width: 100%;
+    background: #fbbf24;
+    color: #1e293b;
+    border: none;
+    border-radius: 16px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: background 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .btn-settle:hover { background: #fde68a; }
+
+  /* Settlement */
+  .settle-card {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .settle-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+  .settle-arrow { color: #94a3b8; font-size: 14px; }
+  .settle-to { font-size: 13px; color: #64748b; }
+  .settle-amount { font-size: 20px; font-weight: 700; color: #f59e0b; margin-left: auto; }
+
+  /* Expense list */
+  .expense-item {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .expense-info { flex: 1; min-width: 0; }
+  .expense-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .expense-payer { font-size: 13px; font-weight: 600; color: #1e293b; }
+  .cat-badge {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-weight: 500;
+  }
+  .expense-memo { font-size: 11px; color: #94a3b8; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .expense-amount { font-size: 16px; font-weight: 700; color: #1e293b; flex-shrink: 0; }
+  .btn-del {
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.1s;
+  }
+  .btn-del:hover { color: #f87171; }
+
+  /* Category styles */
+  .cat-食事   .cat-dot { background: #fb923c; }
+  .cat-食事   .cat-badge { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+  .cat-ホテル .cat-dot { background: #60a5fa; }
+  .cat-ホテル .cat-badge { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+  .cat-交通   .cat-dot { background: #4ade80; }
+  .cat-交通   .cat-badge { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+  .cat-入場料 .cat-dot { background: #c084fc; }
+  .cat-入場料 .cat-badge { background: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
+  .cat-その他 .cat-dot { background: #94a3b8; }
+  .cat-その他 .cat-badge { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+
+  /* Empty */
+  .empty {
+    text-align: center;
+    padding: 48px 16px;
+    border: 1.5px dashed #e2e8f0;
+    border-radius: 16px;
+  }
+  .empty-icon { font-size: 36px; display: block; margin-bottom: 8px; }
+  .empty p { font-size: 13px; color: #94a3b8; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 999px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    z-index: 1000;
+    white-space: nowrap;
+    animation: fadeUp 0.2s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <h1>旅の精算帳</h1>
+      <p>URLを共有するだけ・アカウント不要</p>
+    </div>
+    <button class="btn-share" id="btnShare" onclick="copyUrl()">🔗 URLをコピー</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hint">
+    💡 支出を追加したら <strong>「URLをコピー」→ LINEで送信</strong>。受け取った人もURLを開いて追加・共有できます。
+  </div>
+
+  <!-- Summary -->
+  <div class="card">
+    <div class="summary-nums">
+      <div>
+        <div class="total-label">合計支出</div>
+        <div class="total-amount" id="totalAmt">¥0</div>
+      </div>
+      <div>
+        <div class="share-label">1人あたり</div>
+        <div class="share-amount" id="shareAmt">¥0</div>
+      </div>
+    </div>
+    <div class="member-grid" id="memberGrid"></div>
+  </div>
+
+  <!-- Add expense -->
+  <div class="card">
+    <div class="card-title">支出を追加</div>
+    <div class="form-row">
+      <select id="fPayer"></select>
+      <select id="fCategory">
+        <option>食事</option><option>ホテル</option>
+        <option>交通</option><option>入場料</option><option>その他</option>
+      </select>
+    </div>
+    <input type="number" id="fAmount" placeholder="金額（円）" inputmode="numeric" style="margin-bottom:8px">
+    <input type="text" id="fMemo" placeholder="メモ（任意）">
+    <button class="btn-add" onclick="addExpense()">追加する</button>
+  </div>
+
+  <!-- Settle -->
+  <div id="settleWrap" style="display:none">
+    <button class="btn-settle" id="btnSettle" onclick="toggleSettle()">💰 精算する</button>
+    <div class="card" id="settlePanel" style="display:none">
+      <div class="card-title">精算結果</div>
+      <div id="settleList"></div>
+    </div>
+  </div>
+
+  <!-- Expense list -->
+  <div class="card-title" style="padding: 0 4px; margin-bottom: 8px;" id="historyLabel">支出履歴</div>
+  <div id="expenseList"></div>
+</div>
+
+<div class="toast" id="toast" style="display:none"></div>
+
+<script>
+const MEMBERS_DEFAULT = ["うのき", "バヤシ", "ななせ", "いせ"];
+let state = { members: [...MEMBERS_DEFAULT], expenses: [] };
+let settleOpen = false;
+
+function encodeState(s) {
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(s)))); } catch { return null; }
+}
+function decodeState(enc) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(enc)))); } catch { return null; }
+}
+function readHash() {
+  const m = window.location.hash.match(/[#&]?data=([^&]*)/);
+  return m ? decodeState(m[1]) : null;
+}
+function writeHash() {
+  const enc = encodeState(state);
+  if (enc) history.replaceState(null, '', '#data=' + enc);
+}
+function getShareUrl() {
+  return location.href.split('#')[0] + '#data=' + encodeState(state);
+}
+
+(function init() {
+  const saved = readHash();
+  if (saved) {
+    if (saved.members) state.members = saved.members;
+    if (saved.expenses) state.expenses = saved.expenses;
+  }
+  render();
+})();
+
+function calcTotals() {
+  const total = state.expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const share = state.members.length ? Math.ceil(total / state.members.length) : 0;
+  const paid = {};
+  state.members.forEach(m => paid[m] = 0);
+  state.expenses.forEach(e => { if (paid[e.payer] !== undefined) paid[e.payer] += Number(e.amount); });
+  return { total, share, paid };
+}
+
+function calcSettlement() {
+  const { share, paid } = calcTotals();
+  const balances = state.members.map(m => ({ name: m, balance: (paid[m]||0) - share }));
+  const d = balances.filter(b => b.balance < -0.5).sort((a,b) => a.balance - b.balance).map(x=>({...x}));
+  const c = balances.filter(b => b.balance > 0.5).sort((a,b) => b.balance - a.balance).map(x=>({...x}));
+  const txns = [];
+  let di=0, ci=0;
+  while (di<d.length && ci<c.length) {
+    const amt = Math.min(-d[di].balance, c[ci].balance);
+    txns.push({ from: d[di].name, to: c[ci].name, amount: Math.round(amt) });
+    d[di].balance += amt; c[ci].balance -= amt;
+    if (Math.abs(d[di].balance) < 0.5) di++;
+    if (Math.abs(c[ci].balance) < 0.5) ci++;
+  }
+  return txns;
+}
+
+function addExpense() {
+  const payer = document.getElementById('fPayer').value;
+  const category = document.getElementById('fCategory').value;
+  const amount = Number(document.getElementById('fAmount').value);
+  const memo = document.getElementById('fMemo').value.trim();
+  if (!amount || amount <= 0) { showToast('金額を入力してください'); return; }
+  state.expenses.unshift({ id: Math.random().toString(36).slice(2,8), payer, category, amount, memo });
+  document.getElementById('fAmount').value = '';
+  document.getElementById('fMemo').value = '';
+  writeHash(); render();
+}
+
+function removeExpense(id) {
+  state.expenses = state.expenses.filter(e => e.id !== id);
+  writeHash(); render();
+}
+
+function startEditMember(idx) {
+  const cells = document.querySelectorAll('.member-cell');
+  const cell = cells[idx];
+  const cur = state.members[idx];
+  const paidEl = cell.querySelector('.member-paid');
+  const btn = cell.querySelector('.member-name-btn');
+  btn.style.display = 'none';
+  const inp = document.createElement('input');
+  inp.className = 'member-name-input';
+  inp.value = cur;
+  inp.maxLength = 8;
+  cell.insertBefore(inp, paidEl);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const val = inp.value.trim();
+    if (val) {
+      const old = state.members[idx];
+      state.members[idx] = val;
+      state.expenses = state.expenses.map(e => ({ ...e, payer: e.payer === old ? val : e.payer }));
+      writeHash();
+    }
+    render();
+  };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
+}
+
+function toggleSettle() {
+  settleOpen = !settleOpen;
+  document.getElementById('settlePanel').style.display = settleOpen ? 'block' : 'none';
+  document.getElementById('btnSettle').textContent = settleOpen ? '精算を閉じる ▲' : '💰 精算する ▼';
+  if (settleOpen) renderSettle();
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(getShareUrl()).then(() => {
+    const btn = document.getElementById('btnShare');
+    btn.classList.add('copied');
+    btn.textContent = '✓ コピー完了！';
+    showToast('URLをコピーしました！LINEで送ってね 📱');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = '🔗 URLをコピー';
+    }, 2500);
+  });
+}
+
+function render() {
+  const { total, share, paid } = calcTotals();
+
+  document.getElementById('totalAmt').textContent = '¥' + total.toLocaleString();
+  document.getElementById('shareAmt').textContent = '¥' + share.toLocaleString();
+
+  // Member grid
+  document.getElementById('memberGrid').innerHTML = state.members.map((m, i) => {
+    const p = paid[m] || 0;
+    const ok = p >= share && total > 0;
+    return `<div class="member-cell">
+      <button class="member-name-btn" onclick="startEditMember(${i})" title="タップして編集">${esc(m)} <span style="color:#cbd5e1;font-size:11px">✎</span></button>
+      <span class="member-paid ${ok?'ok'}">¥${p.toLocaleString()}</span>
+    </div>`;
+  }).join('');
+
+  // Payer select
+  const fp = document.getElementById('fPayer');
+  const cur = fp.value;
+  fp.innerHTML = state.members.map(m => `<option ${m===cur?'selected':''}>${esc(m)}</option>`).join('');
+
+  // Settle
+  document.getElementById('settleWrap').style.display = state.expenses.length ? 'block' : 'none';
+  if (settleOpen) renderSettle();
+
+  // History label
+  const count = state.expenses.length;
+  document.getElementById('historyLabel').textContent = '支出履歴' + (count ? `（${count}件）` : '');
+
+  // Expense list
+  const list = document.getElementById('expenseList');
+  if (!count) {
+    list.innerHTML = `<div class="empty"><span class="empty-icon">🧳</span><p>支出を追加してください</p></div>`;
+    return;
+  }
+  list.innerHTML = state.expenses.map(e => `
+    <div class="expense-item cat-${e.category}">
+      <div class="cat-dot"></div>
+      <div class="expense-info">
+        <div class="expense-top">
+          <span class="expense-payer">${esc(e.payer)}</span>
+          <span class="cat-badge">${esc(e.category)}</span>
+        </div>
+        ${e.memo ? `<div class="expense-memo">${esc(e.memo)}</div>` : ''}
+      </div>
+      <span class="expense-amount">¥${Number(e.amount).toLocaleString()}</span>
+      <button class="btn-del" onclick="removeExpense('${e.id}')" aria-label="削除">×</button>
+    </div>`).join('');
+}
+
+function renderSettle() {
+  const txns = calcSettlement();
+  document.getElementById('settleList').innerHTML = !txns.length
+    ? `<p style="text-align:center;color:#94a3b8;padding:20px;font-size:13px">精算不要です 🎉</p>`
+    : txns.map(t => `
+      <div class="settle-card">
+        <span class="settle-name">${esc(t.from)}</span>
+        <span class="settle-arrow">→</span>
+        <span class="settle-name">${esc(t.to)}</span>
+        <span class="settle-to">に支払う</span>
+        <span class="settle-amount">¥${t.amount.toLocaleString()}</span>
+      </div>`).join('');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.style.display = 'none', 2800);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
